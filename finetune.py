@@ -188,11 +188,16 @@ def main(cfg):
         predict_frame = model.predict
     else:
         predict_frame = train_torch(cfg, train, val, targets, task, data, out)
+    # Training-set score too, to spot overfitting
+    (out / 'train_metrics.json').write_text(json.dumps(metrics(train, predict_frame(train), targets, task), indent=2))
     validation_predictions = predict_frame(val)
     (out / 'validation_metrics.json').write_text(json.dumps(metrics(val, validation_predictions, targets, task), indent=2))
     vp = val[['SMILES', 'Molecule_Name']].copy()
     vp[targets] = validation_predictions
     vp.to_csv(out / 'validation_predictions.csv', index=False)
+    if not cfg.evaluate_test:
+        print('Skipping held-out test evaluation (evaluate_test=false).', flush=True)
+        return
     # Only now load and evaluate the held-out labelled test split.
     test = pd.read_csv(data / task / 'test.csv')
     if not len(test):

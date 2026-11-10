@@ -34,10 +34,11 @@ class LightGBMModel:
             if task == 'classification':
                 yt, yv = yt.astype(int), yv.astype(int)
             model = cls(**OmegaConf.to_container(self.cfg.params), random_state=self.seed, verbose=-1)
+            rounds = self.cfg.early_stopping_rounds
             model.fit(Xt[mt], yt, eval_set=[(Xv[mv], yv)],
-                      callbacks=[lgb.early_stopping(self.cfg.early_stopping_rounds, verbose=False)])
+                      callbacks=[lgb.early_stopping(rounds, verbose=False)] if rounds else [])
             model.booster_.save_model(out / f'{t}.lgbm.txt')
-            best[t] = int(model.best_iteration_)
+            best[t] = int(model.best_iteration_ or model.n_estimators)
             print(f'{t}: best iteration {best[t]}', flush=True)
             self.boosters.append(model)
         return best
