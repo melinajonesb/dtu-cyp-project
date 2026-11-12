@@ -83,6 +83,15 @@ def train_torch(cfg, train, val, targets, task, data, out):
     """Trains a torch model with the epoch loop; returns a function frame -> predictions."""
     if cfg.train.epochs < 1 or cfg.train.batch_size < 1:
         raise ValueError('epochs and batch_size must be positive')
+    freeze_encoder_epochs = 0
+    if cfg.model.type == 'atom_jepa':
+        freeze_encoder_epochs = cfg.model.freeze_encoder_epochs
+        if freeze_encoder_epochs < 0:
+            raise ValueError('model.freeze_encoder_epochs must be nonnegative')
+        if cfg.model.freeze_encoder and freeze_encoder_epochs:
+            raise ValueError('Cannot set freeze_encoder_epochs when model.freeze_encoder=true')
+        if freeze_encoder_epochs >= cfg.train.epochs and freeze_encoder_epochs:
+            raise ValueError('model.freeze_encoder_epochs must be less than train.epochs')
     model = MODELS[cfg.model.type](cfg.model, cfg.readout, len(targets), data, cfg.device)
     model.fit_preprocessing(train)  # Feature scaling etc. is fitted on the training split ONLY.
     mean = torch.zeros(len(targets), device=model.device)
@@ -98,6 +107,9 @@ def train_torch(cfg, train, val, targets, task, data, out):
     optimizer = torch.optim.AdamW(model.param_groups(), weight_decay=cfg.train.weight_decay)
     best = float('inf')
     for epoch in range(1, cfg.train.epochs + 1):
+        if freeze_encoder_epochs and epoch == freeze_encoder_epochs + 1:
+            model.unfreeze_encoder()
+            print(f'Unfroze Atom-JEPA encoder at epoch {epoch}', flush=True)
         model.train()
         loss_sum, observed = 0., 0
         for batch in train_loader:

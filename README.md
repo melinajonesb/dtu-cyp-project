@@ -59,6 +59,8 @@ bsub -env "MODEL=atom_jepa, OVERRIDES=readout=linear train.epochs=10" < finetune
 
 `MODEL` is `atom_jepa`, `morgan_mlp`, `rdkit_mlp`, `morgan_rdkit_mlp` or `morgan_rdkit_lgbm`. `TASK` is `regression` or `classification`. `OVERRIDES` takes any Hydra settings, separated by spaces. Check jobs with `bjobs`.
 
+For Atom-JEPA, `model.freeze_encoder=true` trains only the readout, while `model.freeze_encoder_epochs=N` freezes the encoder for the first N epochs and unfreezes it at epoch N+1. The default `0` keeps full fine-tuning from epoch 1. Do not combine a positive `freeze_encoder_epochs` with `freeze_encoder=true`. For example, submit a run that freezes the encoder for the first five epochs with `bsub -env "MODEL=atom_jepa, TASK=regression, OVERRIDES=model.freeze_encoder_epochs=5" < finetune.sh`.
+
 To compare a small set of LightGBM settings using validation metrics only, run `bash sweep_lgbm.sh regression` or `bash sweep_lgbm.sh classification` in an environment with the project dependencies installed. Pass `both` to run both tasks. The script changes one parameter at a time from the configured defaults and saves each run under `runs/<task>/morgan_rdkit_lgbm/sweep/`. It tests learning rates `0.01`, `0.03` (default), and `0.1`; `n_estimators` of `200`, `500`, and `800` with early stopping disabled; `num_leaves` of `15`, `31` (default), and `63`; and `reg_lambda` of `0`, `1` (default), and `10`. Each run includes `best_iterations.json` and `validation_metrics.json`. The script skips test-set evaluation; use the test set only after choosing settings.
 
 ## Tasks and results

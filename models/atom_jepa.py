@@ -28,8 +28,10 @@ class AtomJEPAModel(nn.Module):
         self.cfg, self.folder = cfg, data_dir / 'conformers'
         self.encoder = AtomJEPA.from_pretrained(cfg.checkpoint, device=device,
                                                 precision=cfg.precision, cuequivariance=False)
-        self.encoder.set_grad_checkpointing(not cfg.freeze_encoder)
-        self.encoder.requires_grad_(not cfg.freeze_encoder)
+        self._encoder_permanently_frozen = cfg.freeze_encoder
+        self._encoder_frozen = cfg.freeze_encoder or cfg.freeze_encoder_epochs > 0
+        self.encoder.set_grad_checkpointing(not self._encoder_frozen)
+        self.encoder.requires_grad_(not self._encoder_frozen)
         self.readout = build_readout(readout, self.encoder.embedding_dim, n_targets).to(self.encoder.device)
 
     @property
@@ -38,9 +40,16 @@ class AtomJEPAModel(nn.Module):
 
     def train(self, mode=True):
         super().train(mode)
-        if self.cfg.freeze_encoder:
+        if self._encoder_frozen:
             self.encoder.eval()
         return self
+
+    def unfreeze_encoder(self):
+        if self._encoder_permanently_frozen:
+            raise RuntimeError('Cannot unfreeze an encoder configured to remain frozen')
+        self._encoder_frozen = False
+        self.encoder.requires_grad_(True)
+        self.encoder.set_grad_checkpointing(True)
 
     def fit_preprocessing(self, train):
         pass
@@ -51,7 +60,7 @@ class AtomJEPAModel(nn.Module):
 
     def param_groups(self):
         groups = [{'params': list(self.readout.parameters()), 'lr': self.cfg.readout_lr}]
-        if not self.cfg.freeze_encoder:
+        if not self._encoder_permanently_frozen:
             groups.append({'params': list(self.encoder.parameters()), 'lr': self.cfg.encoder_lr})
         return groups
 
