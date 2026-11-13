@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fine-tune one model (Atom-JEPA or a baseline) for regression OR classification.
+"""Fine-tune one model (Atom-JEPA, ChemBERTa, or a baseline) for regression OR classification.
 
 Configured with Hydra (conf/), e.g. python finetune.py model=morgan_mlp task=classification"""
 import hashlib
@@ -182,7 +182,7 @@ def main(cfg):
                 raise ValueError(f'{t} needs both classes in train and validation; revise split')
     config = cfg_dict(cfg)
     packages = ['torch', 'atom-jepa', 'rdkit', 'numpy', 'pandas', 'scikit-learn', 'hydra-core',
-                'descriptastorus', 'lightgbm']
+                'descriptastorus', 'lightgbm', 'transformers']
     config.update(targets=targets, output_dir=str(out),
                   versions={k: importlib.metadata.version(k) for k in packages},
                   preparation=json.loads((data / 'manifest.json').read_text()),

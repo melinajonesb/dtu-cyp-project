@@ -55,9 +55,11 @@ bsub < prepare_data.sh
 bsub < finetune.sh
 bsub -env "MODEL=morgan_mlp, TASK=classification" < finetune.sh
 bsub -env "MODEL=atom_jepa, OVERRIDES=readout=linear train.epochs=10" < finetune.sh
+bsub -env "MODEL=chemberta, TASK=regression, OVERRIDES=evaluate_test=false" < finetune.sh
+bsub -env "MODEL=chemberta, TASK=classification, OVERRIDES=evaluate_test=false" < finetune.sh
 ```
 
-`MODEL` is `atom_jepa`, `morgan_mlp`, `rdkit_mlp`, `morgan_rdkit_mlp` or `morgan_rdkit_lgbm`. `TASK` is `regression` or `classification`. `OVERRIDES` takes any Hydra settings, separated by spaces. Check jobs with `bjobs`.
+`MODEL` is `atom_jepa`, `chemberta`, `morgan_mlp`, `rdkit_mlp`, `morgan_rdkit_mlp` or `morgan_rdkit_lgbm`. `TASK` is `regression` or `classification`. `OVERRIDES` takes any Hydra settings, separated by spaces. Check jobs with `bjobs`.
 
 For Atom-JEPA, `model.freeze_encoder=true` trains only the readout, while `model.freeze_encoder_epochs=N` freezes the encoder for the first N epochs and unfreezes it at epoch N+1. The default `0` keeps full fine-tuning from epoch 1. Do not combine a positive `freeze_encoder_epochs` with `freeze_encoder=true`. For example, submit a run that freezes the encoder for the first five epochs with `bsub -env "MODEL=atom_jepa, TASK=regression, OVERRIDES=model.freeze_encoder_epochs=5" < finetune.sh`.
 
@@ -95,12 +97,13 @@ The original challenge ends before this project starts, so we run our own leader
 | `model=` | Input | Default readout |
 |---|---|---|
 | `atom_jepa` | 3D conformer → pretrained Atom-JEPA encoder (fine-tuned) | `mlp` |
+| `chemberta` | SMILES string → pretrained ChemBERTa encoder (fine-tuned) | `mlp` |
 | `morgan_mlp` | Morgan count fingerprint | `mlp` |
 | `rdkit_mlp` | 200 normalized RDKit descriptors | `mlp` |
 | `morgan_rdkit_mlp` | Both, concatenated | `mlp` |
 | `morgan_rdkit_lgbm` | Both, concatenated | none (LightGBM) |
 
-The MLP baselines follow those in the [Atom-JEPA repository](https://github.com/khelverskovp/atom-jepa). Any readout works with any neural model, e.g. `model=atom_jepa readout=linear`. `morgan_rdkit_lgbm` is a gradient-boosted tree baseline outside the epoch loop: one LightGBM model per enzyme, with early stopping on validation.
+The MLP baselines follow those in the [Atom-JEPA repository](https://github.com/khelverskovp/atom-jepa). Any readout works with any neural model, e.g. `model=atom_jepa readout=linear`. ChemBERTa uses the `DeepChem/ChemBERTa-77M-MLM` checkpoint: a RoBERTa-style model pretrained with masked language modeling on SMILES strings. It tokenizes SMILES directly and mean-pools the non-padding token representations; it does not require 3D conformers. In contrast, Atom-JEPA receives 3D atomic coordinates and uses a 3D pretrained encoder. ChemBERTa is fine-tuned end-to-end by default, while `model.freeze_encoder=true` trains only the readout. `morgan_rdkit_lgbm` is a gradient-boosted tree baseline outside the epoch loop: one LightGBM model per enzyme, with early stopping on validation.
 
 > **Extending the code is the core of the project.** Below is how to add your own readout head and your own model.
 

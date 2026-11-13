@@ -1,0 +1,19 @@
+# @package _global_
+# ChemBERTa SMILES language model with a task-specific readout head.
+defaults:
+  - override /readout: mlp
+
+model:
+  name: chemberta
+  type: chemberta
+  checkpoint: DeepChem/ChemBERTa-77M-MLM
+  max_length: 256
+  freeze_encoder: false
+  encoder_lr: 2.0e-5
+  readout_lr: 1.0e-3
+
+train:
+  epochs: 20
+  batch_size: 16
+  weight_decay: 1.0e-2
+  grad_clip: 1.0
