@@ -65,6 +65,25 @@ For Atom-JEPA, `model.freeze_encoder=true` trains only the readout, while `model
 
 To compare a small set of LightGBM settings using validation metrics only, run `bash sweep_lgbm.sh regression` or `bash sweep_lgbm.sh classification` in an environment with the project dependencies installed. Pass `both` to run both tasks. The script changes one parameter at a time from the configured defaults and saves each run under `runs/<task>/morgan_rdkit_lgbm/sweep/`. It tests learning rates `0.01`, `0.03` (default), and `0.1`; `n_estimators` of `200`, `500`, and `800` with early stopping disabled; `num_leaves` of `15`, `31` (default), and `63`; and `reg_lambda` of `0`, `1` (default), and `10`. Each run includes `best_iterations.json` and `validation_metrics.json`. The script skips test-set evaluation; use the test set only after choosing settings.
 
+## Where results are saved
+
+The training scripts write results automatically with this layout:
+
+```text
+runs/<task>/<model>/<timestamp>/
+```
+
+For example, a ChemBERTa regression run is saved as
+`runs/regression/chemberta/<timestamp>/`. Sweeps use the corresponding model
+subfolder, for example `runs/regression/chemberta/sweep/<timestamp>_<label>/`
+or `runs/regression/morgan_rdkit_lgbm/sweep/<timestamp>_<label>/`.
+
+The model and task folders may be reorganized locally for readability after
+downloading results, for example as `runs/<model>/<task>/<run>/`. This is not
+the layout used by `finetune.py` or the job scripts. The `test_results_all/`
+folder is an additional local organization created from downloaded results;
+it is not written by the training code.
+
 ## Tasks and results
 
 There are two separate datasets from the [challenge data](https://huggingface.co/datasets/openadmet/cyp-challenge-train-test), one per task:
